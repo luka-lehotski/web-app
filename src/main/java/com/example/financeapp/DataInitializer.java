@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -46,7 +47,7 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Creating test currency...");
             Valuta eur = new Valuta();
             eur.setNaziv("EUR");
-            eur.setVrednost(1.0);
+            eur.setVrednost(BigDecimal.ONE); // Correctly using BigDecimal
             valutaRepository.save(eur);
             System.out.println("Test currency EUR created with id=1");
         }

@@ -1,6 +1,7 @@
 package com.example.financeapp.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -11,8 +12,8 @@ public class Novcanik {
     private Long id;
 
     private String naziv;
-    private Double pocetnoStanje;
-    private Double trenutnoStanje;
+    private BigDecimal pocetnoStanje;
+    private BigDecimal trenutnoStanje;
 
     @ManyToOne
     private Valuta valuta;
@@ -41,19 +42,19 @@ public class Novcanik {
         this.naziv = naziv;
     }
 
-    public Double getPocetnoStanje() {
+    public BigDecimal getPocetnoStanje() {
         return pocetnoStanje;
     }
 
-    public void setPocetnoStanje(Double pocetnoStanje) {
+    public void setPocetnoStanje(BigDecimal pocetnoStanje) {
         this.pocetnoStanje = pocetnoStanje;
     }
 
-    public Double getTrenutnoStanje() {
+    public BigDecimal getTrenutnoStanje() {
         return trenutnoStanje;
     }
 
-    public void setTrenutnoStanje(Double trenutnoStanje) {
+    public void setTrenutnoStanje(BigDecimal trenutnoStanje) {
         this.trenutnoStanje = trenutnoStanje;
     }
 

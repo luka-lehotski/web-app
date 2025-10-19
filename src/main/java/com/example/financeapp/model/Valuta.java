@@ -4,6 +4,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import java.math.BigDecimal;
 
 @Entity
 public class Valuta {
@@ -13,7 +14,7 @@ public class Valuta {
     private Long id;
 
     private String naziv;
-    private Double vrednost;
+    private BigDecimal vrednost;
 
     public Long getId() {
         return id;
@@ -31,11 +32,11 @@ public class Valuta {
         this.naziv = naziv;
     }
 
-    public Double getVrednost() {
+    public BigDecimal getVrednost() {
         return vrednost;
     }
 
-    public void setVrednost(Double vrednost) {
+    public void setVrednost(BigDecimal vrednost) {
         this.vrednost = vrednost;
     }
 }
