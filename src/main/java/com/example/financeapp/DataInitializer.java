@@ -2,12 +2,15 @@ package com.example.financeapp;
 
 import com.example.financeapp.model.Kategorija;
 import com.example.financeapp.model.Korisnik;
+import com.example.financeapp.model.Novcanik;
 import com.example.financeapp.model.Valuta;
 import com.example.financeapp.repository.KategorijaRepository;
 import com.example.financeapp.repository.KorisnikRepository;
+import com.example.financeapp.repository.NovcanikRepository;
 import com.example.financeapp.repository.ValutaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -19,43 +22,52 @@ public class DataInitializer implements CommandLineRunner {
 
     @Autowired
     private KategorijaRepository kategorijaRepository;
-
     @Autowired
     private KorisnikRepository korisnikRepository;
-
     @Autowired
     private ValutaRepository valutaRepository;
+    @Autowired
+    private NovcanikRepository novcanikRepository; // DODATO
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
+        // Kreiranje podataka samo ako je baza potpuno prazna
         if (korisnikRepository.count() == 0) {
-            System.out.println("Creating test user...");
+            System.out.println("Creating test data...");
+
+            // 1. Kreiraj Korisnika
             Korisnik testUser = new Korisnik();
             testUser.setKorisnickoIme("testuser");
             testUser.setIme("Test");
             testUser.setPrezime("User");
             testUser.setMejlAdresa("test@example.com");
-            testUser.setLozinka("password");
+            testUser.setLozinka(passwordEncoder.encode("password"));
             testUser.setUloga(Korisnik.Uloga.KORISNIK);
             testUser.setDatumRegistracije(new Date());
-            korisnikRepository.save(testUser);
-            System.out.println("Test user created with id=1");
-        }
+            testUser.setBlokiran(false);
+            testUser = korisnikRepository.save(testUser);
 
-
-        if (valutaRepository.count() == 0) {
-            System.out.println("Creating test currency...");
+            // 2. Kreiraj Valutu
             Valuta eur = new Valuta();
             eur.setNaziv("EUR");
-            eur.setVrednost(BigDecimal.ONE); // Correctly using BigDecimal
-            valutaRepository.save(eur);
-            System.out.println("Test currency EUR created with id=1");
-        }
+            eur.setVrednost(BigDecimal.ONE);
+            eur = valutaRepository.save(eur);
 
+            // 3. Kreiraj Novčanik za korisnika
+            Novcanik novcanik = new Novcanik();
+            novcanik.setNaziv("Glavni račun");
+            novcanik.setKorisnik(testUser);
+            novcanik.setValuta(eur);
+            novcanik.setPocetnoStanje(new BigDecimal("1000.00"));
+            novcanik.setTrenutnoStanje(new BigDecimal("1000.00"));
+            novcanik.setDatumKreiranja(new Date());
+            novcanik.setStedni(false);
+            novcanik.setArhiviran(false);
+            novcanikRepository.save(novcanik);
 
-        if (kategorijaRepository.countByKorisnikIsNull() == 0) {
-            System.out.println("Creating predefined categories...");
-
+            // 4. Kreiraj Kategorije
             Kategorija hrana = new Kategorija();
             hrana.setNaziv("Hrana");
             hrana.setTip(Kategorija.Tip.TROSAK);
@@ -68,7 +80,7 @@ public class DataInitializer implements CommandLineRunner {
 
             kategorijaRepository.saveAll(List.of(hrana, plata));
 
-            System.out.println("Predefined categories created.");
+            System.out.println("Test data created.");
         }
     }
 }

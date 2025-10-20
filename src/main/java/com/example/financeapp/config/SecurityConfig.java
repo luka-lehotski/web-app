@@ -31,14 +31,18 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(csrf -> csrf.disable()) // Onemogućavamo CSRF
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/api/public/**").permitAll() // Javni endpointi
+                // Dozvoljavamo pristup javnim i auth rutama, KAO I H2 KONZOLI
+                .requestMatchers("/api/auth/**", "/api/public/**", "/h2-console/**").permitAll()
                 .anyRequest().authenticated() // Svi ostali zahtevaju autentifikaciju
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Bez sesija
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class); // Dodajemo naš JWT filter
+
+        // DODATO: Dozvoljava H2 konzoli da se prikaže u <frame> elementu
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 
         return http.build();
     }

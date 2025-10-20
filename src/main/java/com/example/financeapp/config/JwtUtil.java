@@ -2,10 +2,10 @@ package com.example.financeapp.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.function.Function;
@@ -13,8 +13,10 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    // U realnoj aplikaciji, ovaj ključ bi bio u konfiguracionom fajlu i mnogo kompleksniji
-    private final Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS256);
+    // Korišćenjem fiksne vrednosti osiguravamo da je ključ uvek isti.
+    private final String secretString = "aVeryLongAndSecureSecretKeyForOurFinanceApplication1234567890!@#$%^&*()";
+    private final Key secretKey = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
+
     private final long expiration = 1000 * 60 * 60 * 10; // 10 sati
 
     public String generate(Long userId, String role) {

@@ -25,9 +25,24 @@ public class TransakcijaController {
     @Autowired
     private PonavljajucaTransakcijaService ponavljajucaTransakcijaService;
 
-    // ... (postojeći endpointi ostaju isti)
+    // Kreiranje obične transakcije - AŽURIRANO
     @PostMapping("/{korisnikId}/{novcanikId}/{kategorijaId}")
-    public Transakcija createTransakcija(@RequestBody Transakcija transakcija, @PathVariable Long korisnikId, @PathVariable Long novcanikId, @PathVariable Long kategorijaId) { return transakcijaService.createTransakcija(transakcija, korisnikId, novcanikId, kategorijaId); }
+    public ResponseEntity<?> createTransakcija(@RequestBody Transakcija transakcija, 
+                                               @PathVariable Long korisnikId, 
+                                               @PathVariable Long novcanikId, 
+                                               @PathVariable Long kategorijaId) {
+        try {
+            Transakcija kreiranaTransakcija = transakcijaService.createTransakcija(transakcija, korisnikId, novcanikId, kategorijaId);
+            return ResponseEntity.ok(kreiranaTransakcija);
+        } catch (IllegalArgumentException e) {
+            // Vraća 400 Bad Request sa porukom o grešci kao čistim tekstom
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Došlo je do neočekivane greške.");
+        }
+    }
+
+    // ... (ostali endpointi ostaju isti)
     @PostMapping("/{korisnikId}/transfer")
     public ResponseEntity<Void> transfer(@PathVariable Long korisnikId, @RequestBody TransferRequest req) { /* ... */ return ResponseEntity.noContent().build(); }
     @GetMapping("/{korisnikId}/novcanik/{novcanikId}/stranica")
@@ -38,42 +53,12 @@ public class TransakcijaController {
     public List<Transakcija> getTransakcijeByNovcanikId(@PathVariable Long novcanikId) { return transakcijaService.getTransakcijeByNovcanikId(novcanikId); }
     @GetMapping("/{korisnikId}/filter")
     public List<Transakcija> getFilteredTransactions(@PathVariable Long korisnikId, @RequestParam(required = false) Long novcanikId, @RequestParam(required = false) Long kategorijaId, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date startDate, @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date endDate, @RequestParam(required = false) BigDecimal minIznos, @RequestParam(required = false) BigDecimal maxIznos) { return transakcijaService.getFilteredTransactions(korisnikId, novcanikId, kategorijaId, startDate, endDate, minIznos, maxIznos); }
-
-    // --- Endpointi za ponavljajuće transakcije ---
-
-    // Kreiranje šablona
     @PostMapping("/{korisnikId}/ponavljajuce")
-    public ResponseEntity<Transakcija> createSablon(@PathVariable Long korisnikId, @RequestBody Transakcija zahtev) {
-        Transakcija sablon = ponavljajucaTransakcijaService.kreirajSablon(zahtev, korisnikId);
-        return ResponseEntity.ok(sablon);
-    }
-
-    // Lista svih šablona za korisnika
+    public ResponseEntity<Transakcija> createSablon(@PathVariable Long korisnikId, @RequestBody Transakcija zahtev) { return ResponseEntity.ok(ponavljajucaTransakcijaService.kreirajSablon(zahtev, korisnikId)); }
     @GetMapping("/{korisnikId}/ponavljajuce")
-    public ResponseEntity<List<Transakcija>> getSabloni(@PathVariable Long korisnikId) {
-        List<Transakcija> sabloni = ponavljajucaTransakcijaService.listaSablona(korisnikId);
-        return ResponseEntity.ok(sabloni);
-    }
-
-    // Uključivanje šablona
+    public ResponseEntity<List<Transakcija>> getSabloni(@PathVariable Long korisnikId) { return ResponseEntity.ok(ponavljajucaTransakcijaService.listaSablona(korisnikId)); }
     @PutMapping("/{korisnikId}/ponavljajuce/{sablonId}/ukljuci")
-    public ResponseEntity<Transakcija> ukljuciSablon(@PathVariable Long korisnikId, @PathVariable Long sablonId) {
-        try {
-            Transakcija sablon = ponavljajucaTransakcijaService.ukljuci(sablonId, korisnikId);
-            return ResponseEntity.ok(sablon);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    // Isključivanje šablona
+    public ResponseEntity<Transakcija> ukljuciSablon(@PathVariable Long korisnikId, @PathVariable Long sablonId) { return ResponseEntity.ok(ponavljajucaTransakcijaService.ukljuci(sablonId, korisnikId)); }
     @PutMapping("/{korisnikId}/ponavljajuce/{sablonId}/iskljuci")
-    public ResponseEntity<Transakcija> iskljuciSablon(@PathVariable Long korisnikId, @PathVariable Long sablonId) {
-        try {
-            Transakcija sablon = ponavljajucaTransakcijaService.iskljuci(sablonId, korisnikId);
-            return ResponseEntity.ok(sablon);
-        } catch (Exception e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
+    public ResponseEntity<Transakcija> iskljuciSablon(@PathVariable Long korisnikId, @PathVariable Long sablonId) { return ResponseEntity.ok(ponavljajucaTransakcijaService.iskljuci(sablonId, korisnikId)); }
 }

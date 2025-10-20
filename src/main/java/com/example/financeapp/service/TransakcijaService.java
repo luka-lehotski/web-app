@@ -33,17 +33,95 @@ public class TransakcijaService {
     @Autowired
     private NovcanikService novcanikService;
 
-    // ... (createTransakcija i transfer ostaju isti)
     @Transactional
-    public Transakcija createTransakcija(Transakcija transakcija, Long korisnikId, Long novcanikId, Long kategorijaId) { /* ... */ return null; }
+    public Transakcija createTransakcija(Transakcija transakcija, Long korisnikId, Long novcanikId, Long kategorijaId) {
+        Korisnik korisnik = korisnikRepository.findById(korisnikId)
+                .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen."));
+
+        Novcanik novcanik = novcanikRepository.findById(novcanikId)
+                .orElseThrow(() -> new RuntimeException("Novčanik nije pronađen."));
+
+        if (!novcanik.getKorisnik().getId().equals(korisnikId)) {
+            throw new RuntimeException("Nemate dozvolu za pristup ovom novčaniku.");
+        }
+
+        Kategorija kategorija = kategorijaRepository.findById(kategorijaId)
+                .orElseThrow(() -> new RuntimeException("Kategorija nije pronađena."));
+
+        transakcija.setKorisnik(korisnik);
+        transakcija.setNovcanik(novcanik);
+        transakcija.setKategorija(kategorija);
+
+        if (transakcija.getDatumTransakcije() == null) {
+            transakcija.setDatumTransakcije(new Date());
+        }
+
+        // Ažuriranje stanja novčanika
+        BigDecimal trenutnoStanje = novcanik.getTrenutnoStanje();
+        if (transakcija.getTip() == Kategorija.Tip.PRIHOD) {
+            novcanik.setTrenutnoStanje(trenutnoStanje.add(transakcija.getIznos()));
+        } else {
+            novcanik.setTrenutnoStanje(trenutnoStanje.subtract(transakcija.getIznos()));
+        }
+
+        novcanikRepository.save(novcanik);
+        return transakcijaRepository.save(transakcija);
+    }
+
     @Transactional
-    public void transfer(Long fromNovcanikId, Long toNovcanikId, BigDecimal iznos, Long korisnikId, Date datum) { /* ... */ }
+    public void transfer(Long fromNovcanikId, Long toNovcanikId, BigDecimal iznos, Long korisnikId, Date datum) {
+        Novcanik fromNovcanik = novcanikRepository.findById(fromNovcanikId)
+                .orElseThrow(() -> new RuntimeException("Izvorni novčanik nije pronađen."));
 
-    public List<Transakcija> getTransakcijeByNovcanikId(Long novcanikId) { return transakcijaRepository.findAllByNovcanikId(novcanikId); }
+        Novcanik toNovcanik = novcanikRepository.findById(toNovcanikId)
+                .orElseThrow(() -> new RuntimeException("Odredišni novčanik nije pronađen."));
 
-    // Metoda je ažurirana da prihvata i novcanikId
-    public List<Transakcija> getFilteredTransactions(Long korisnikId, Long novcanikId, Long kategorijaId, Date startDate, Date endDate, BigDecimal minIznos, BigDecimal maxIznos) {
-        return transakcijaRepository.findByKorisnikIdAndFilters(korisnikId, novcanikId, kategorijaId, startDate, endDate, minIznos, maxIznos);
+        if (!fromNovcanik.getKorisnik().getId().equals(korisnikId) ||
+                !toNovcanik.getKorisnik().getId().equals(korisnikId)) {
+            throw new RuntimeException("Nemate dozvolu za pristup jednom od novčanika.");
+        }
+
+        Korisnik korisnik = korisnikRepository.findById(korisnikId)
+                .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen."));
+
+        // Konverzija valuta ako je potrebno
+        BigDecimal konverzioniKurs = BigDecimal.ONE;
+        BigDecimal iznosUOdredisnoj = iznos;
+
+        if (!fromNovcanik.getValuta().getId().equals(toNovcanik.getValuta().getId())) {
+            konverzioniKurs = toNovcanik.getValuta().getVrednost()
+                    .divide(fromNovcanik.getValuta().getVrednost(), 4, RoundingMode.HALF_UP);
+            iznosUOdredisnoj = iznos.multiply(konverzioniKurs);
+        }
+
+        // Ažuriranje stanja novčanika
+        fromNovcanik.setTrenutnoStanje(fromNovcanik.getTrenutnoStanje().subtract(iznos));
+        toNovcanik.setTrenutnoStanje(toNovcanik.getTrenutnoStanje().add(iznosUOdredisnoj));
+
+        novcanikRepository.save(fromNovcanik);
+        novcanikRepository.save(toNovcanik);
+
+        // Kreiranje transfera
+        Transfer transfer = new Transfer();
+        transfer.setFromNovcanik(fromNovcanik);
+        transfer.setToNovcanik(toNovcanik);
+        transfer.setIznos(iznos);
+        transfer.setKonverzioniKurs(konverzioniKurs);
+        transfer.setDatum(datum != null ? datum : new Date());
+        transfer.setKorisnik(korisnik);
+
+        transferRepository.save(transfer);
+    }
+
+    public List<Transakcija> getTransakcijeByNovcanikId(Long novcanikId) {
+        return transakcijaRepository.findAllByNovcanikId(novcanikId);
+    }
+
+    public List<Transakcija> getFilteredTransactions(Long korisnikId, Long novcanikId, Long kategorijaId,
+                                                     Date startDate, Date endDate,
+                                                     BigDecimal minIznos, BigDecimal maxIznos) {
+        return transakcijaRepository.findByKorisnikIdAndFilters(korisnikId, novcanikId, kategorijaId,
+                startDate, endDate, minIznos, maxIznos);
     }
 
     public List<Transakcija> transakcijePoStranicama(Long novcanikId, Long korisnikId, int page, int size) {
@@ -52,9 +130,7 @@ public class TransakcijaService {
         return transakcijaRepository.findAllByNovcanikIdAndKorisnikId(novcanikId, korisnikId, pageable);
     }
 
-    // Nova metoda za pregled po periodu
     public List<Transakcija> pregledPoPeriodu(Long novcanikId, Long korisnikId, Period period, LocalDate referenca) {
-        // Provera vlasništva
         novcanikService.findNovcanikByIdAndKorisnikId(novcanikId, korisnikId);
 
         if (referenca == null) {
